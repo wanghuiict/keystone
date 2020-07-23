@@ -238,6 +238,22 @@ class Manager(manager.Manager):
 
         assignment.COMPUTED_ASSIGNMENTS_REGION.invalidate()
 
+        # add default user to new project.
+        username = 'freezer'
+        try:
+            user_id = PROVIDERS.identity_api.get_user_by_name(username, CONF.identity.default_domain_id)['id']
+            user_projects = PROVIDERS.assignment_api.list_projects_for_user(user_id)
+            for proj in user_projects:
+                if proj['name'] == 'service': #wanghuiict: only select 'service' project ?
+                    user_project_id = proj['id']
+                    roles = PROVIDERS.assignment_api.get_roles_for_user_and_project(user_id, user_project_id)
+                    for x in roles:
+                        role_id = PROVIDERS.role_api.get_role(x)['id']
+                        PROVIDERS.assignment_api.add_role_to_user_and_project(user_id, project_id, role_id)
+                    break
+        except exception.UserNotFound as _e:
+                LOG.warning('skip adding nonexistent user %s to project %s.'%(username, project['name']))
+
         return ret
 
     def assert_domain_enabled(self, domain_id, domain=None):
